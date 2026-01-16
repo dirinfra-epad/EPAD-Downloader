@@ -1,13 +1,13 @@
-let versao = chrome.runtime.getManifest().version;
-document.getElementById('version').innerText = ` v${versao}`;
+let versaoAtual = chrome.runtime.getManifest().version;
+document.getElementById('version').innerText = ` v${versaoAtual}`;
 
 /////// ------------- VERIFICA VERSÃO E ABRE PARA ATUALIZAR, CASO ESTEJA DIFERENTE
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const data = await getLatestRelease();
-    const currentVersion = chrome.runtime.getManifest().version;
+    // const currentVersion = chrome.runtime.getManifest().version;
 
-    if (data.version !== currentVersion) {
+    if (data.version !== versaoAtual) {
       // Abre a página de releases
       // abre automaticamente quando abre o popup:
       // chrome.tabs.create({ url: `https://leowlopez.github.io/EPAD-Downloader/releases/?version=${currentVersion}` });
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       atualizacaoDiv.innerHTML = `
       <span>🚀 v${data.version} disponível!<br/></span>
       <a 
-      href="https://leowlopez.github.io/EPAD-Downloader/releases/?version=${currentVersion}" 
+      href="https://leowlopez.github.io/EPAD-Downloader/releases/?version=${versaoAtual}" 
       target="_blank" 
       >
           🔄 Atualizar para a nova versão
