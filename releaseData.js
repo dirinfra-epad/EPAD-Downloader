@@ -1,6 +1,6 @@
 // releaseData.js
 async function getLatestRelease() {
-  const res = await fetch('https://api.github.com/repos/LeowLopez/EPAD-Downloader/releases/latest');
+  const res = await fetch('https://api.github.com/repos/dirinfra-epad/EPAD-Downloader/releases/latest');
   if (!res.ok) throw new Error('Falha ao buscar release do GitHub');
 
   const data = await res.json();

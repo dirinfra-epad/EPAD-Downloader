@@ -10,14 +10,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.version !== versaoAtual) {
       // Abre a página de releases
       // abre automaticamente quando abre o popup:
-      // chrome.tabs.create({ url: `https://leowlopez.github.io/EPAD-Downloader/releases/?version=${currentVersion}` });
+      // chrome.tabs.create({ url: `https://dirinfra-epad.github.io/EPAD-Downloader/releases/?version=${currentVersion}` });
 
       // apenas cria o link para o usuário ir para a página:
       const atualizacaoDiv = document.getElementById('atualizacao');
       atualizacaoDiv.innerHTML = `
       <span>🚀 v${data.version} disponível!<br/></span>
       <a 
-      href="https://leowlopez.github.io/EPAD-Downloader/releases/?version=${versaoAtual}" 
+      href="https://dirinfra-epad.github.io/EPAD-Downloader/releases/?version=${versaoAtual}" 
       target="_blank" 
       >
           🔄 Atualizar para a nova versão

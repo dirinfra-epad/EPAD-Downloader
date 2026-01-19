@@ -1,6 +1,6 @@
 # EPAD Downloader
 
-[Disponível no GitHub Pages](https://leowlopez.github.io/EPAD-Downloader/) – Acesse o tutorial e baixe a última versão facilmente.
+[Disponível no GitHub Pages](https://dirinfra-epad.github.io/EPAD-Downloader/) – Acesse o tutorial e baixe a última versão facilmente.
 
 Extensão Chrome para baixar documentos automaticamente do SIGADAER e SILOMS, com organização de nomes e versão automatizada.
 
