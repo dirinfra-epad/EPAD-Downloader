@@ -94,6 +94,35 @@ body {
   border: 1px solid var(--cor-borda);
 }
 
+#logConsole p {
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.log-copy-link {
+  color: #0f4aa3;
+  text-decoration: underline;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.log-copy-link:hover {
+  color: #0a3270;
+}
+
+.log-copy-hint {
+  color: #546274;
+  font-style: italic;
+}
+
+.log-copy-hint--success {
+  color: #1f7a1f;
+}
+
+.log-copy-hint--error {
+  color: #b91c1c;
+}
+
 .oculto,
 .ocultoCreditos {
   display: none;

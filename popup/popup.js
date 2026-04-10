@@ -54,6 +54,92 @@ document.getElementById('baixarSilomsBtn').addEventListener('click', () => {
   });
 });
 
+const aplicarCorLog = (elemento, tipo) => {
+  switch (tipo) {
+    case 'erro':
+      elemento.style.color = 'red';
+      break;
+    case 'ok':
+      elemento.style.color = 'green';
+      break;
+    case 'info':
+      elemento.style.color = 'black';
+      break;
+    default:
+      elemento.style.color = 'blue';
+      break;
+  }
+};
+
+const copiarTexto = async texto => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch (err) {
+    console.error('Erro ao copiar com navigator.clipboard:', err);
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = texto;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-999999px';
+    textarea.style.top = '-999999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    const copiado = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return copiado;
+  } catch (err) {
+    console.error('Erro no fallback de cópia:', err);
+    return false;
+  }
+};
+
+const criarTrechoCopiavel = ({ label, copyText, hintText = ' (clique para copiar)' }) => {
+  const fragment = document.createDocumentFragment();
+  const link = document.createElement('a');
+  const hint = document.createElement('span');
+
+  link.href = '#';
+  link.textContent = label;
+  link.className = 'log-copy-link';
+  link.title = 'Clique para copiar o nome do arquivo';
+
+  hint.className = 'log-copy-hint';
+  hint.textContent = hintText;
+
+  link.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const copiado = await copiarTexto(copyText);
+    if (copiado) {
+      hint.textContent = ' (copiado!)';
+      hint.className = 'log-copy-hint log-copy-hint--success';
+      setTimeout(() => {
+        hint.textContent = hintText;
+        hint.className = 'log-copy-hint';
+      }, 1500);
+      return;
+    }
+
+    hint.textContent = ' (erro ao copiar)';
+    hint.className = 'log-copy-hint log-copy-hint--error';
+    setTimeout(() => {
+      hint.textContent = hintText;
+      hint.className = 'log-copy-hint';
+    }, 2000);
+  });
+
+  fragment.appendChild(link);
+  fragment.appendChild(hint);
+  return fragment;
+};
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.from === 'content_script') {
 
@@ -68,47 +154,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     }
 
-    if (msg.log) {
+    if (msg.log || msg.copyText) {
       const logEl = document.getElementById('logConsole');
       if (logEl.classList.contains('oculto')) logEl.classList.remove('oculto');
 
       const p = document.createElement('p');
+      aplicarCorLog(p, msg.tipo);
 
-      if (msg.tipo === 'copia') {
-        const a = document.createElement('a');
-        a.href = '#';
-        a.textContent = '[Copiar conteúdo]';
-        a.style.color = 'mediumblue';
-        a.style.textDecoration = 'underline';
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          navigator.clipboard.writeText(msg.log)
-            .then(() => {
-              a.textContent = '[Copiado!]';
-              setTimeout(() => (a.textContent = '[Copiar conteúdo]'), 1500);
-            })
-            .catch(() => {
-              a.textContent = '[Erro ao copiar]';
-            });
-        });
-        p.appendChild(a);
-
+      if (msg.copyText) {
+        if (msg.log) p.appendChild(document.createTextNode(msg.log));
+        p.appendChild(criarTrechoCopiavel({
+          label: msg.copyLabel || msg.copyText,
+          copyText: msg.copyText,
+          hintText: msg.copyHint
+        }));
+      } else if (msg.tipo === 'copia') {
+        p.appendChild(criarTrechoCopiavel({
+          label: msg.log,
+          copyText: msg.log
+        }));
       } else {
         p.textContent = msg.log;
-        switch (msg.tipo) {
-          case 'erro':
-            p.style.color = 'red';
-            break;
-          case 'ok':
-            p.style.color = 'green';
-            break;
-          case 'info':
-            p.style.color = 'black';
-            break;
-          default:
-            p.style.color = 'blue';
-            break;
-        }
       }
 
       logEl.appendChild(p);

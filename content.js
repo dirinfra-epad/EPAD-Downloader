@@ -48,8 +48,30 @@
 
   ///// INÍCIO DO SCRIPT SIGADER ---------------------------------------------------------------
   ///// FUNÇÕES AUXILIARES ------------------------------------------------------------
-  const enviarLog = (tipo, msg) => {//envia o status para o popup
-    chrome.runtime.sendMessage({ from: 'content_script', tipo, log: msg });
+  const enviarLog = (tipo, msg, extras = {}) => {//envia o status para o popup
+    chrome.runtime.sendMessage({ from: 'content_script', tipo, log: msg, ...extras });
+  };
+
+  const enviarLogNomeCopiavel = (prefixo, nomeArquivo, tipo = 'info') => {
+    enviarLog(tipo, prefixo, {
+      copyText: nomeArquivo,
+      copyLabel: nomeArquivo,
+      copyHint: ' (clique para copiar)'
+    });
+  };
+
+  const resolverNomeSugeridoDownload = (url, nomeBase) => {
+    if (/\.[a-zA-Z0-9]+$/.test(nomeBase)) return nomeBase;
+
+    try {
+      const pathname = decodeURIComponent(new URL(url, window.location.href).pathname || '');
+      const match = pathname.match(/\.(pdf|docx|xlsx|pptx)\b/i);
+      if (match) return `${nomeBase}.${match[1].toLowerCase()}`;
+    } catch (err) {
+      console.debug('Não foi possível inferir a extensão pela URL:', err);
+    }
+
+    return nomeBase;
   };
 
   const normalizarTexto = texto => {
@@ -498,6 +520,8 @@
       // Copia o nome do arquivo para o clipboard
       const nomeCompleto = nomeArquivo;
 
+      enviarLogNomeCopiavel('Tentando download de ', nomeCompleto);
+
       const copiado = await copiarParaClipboard(nomeCompleto);
 
       if (copiado) {
@@ -505,8 +529,7 @@
         enviarLog("info", "Cole o nome (Ctrl+V) ao renomear o arquivo baixado!");
       } else {
         enviarLog("erro", `Não foi possível copiar o nome '${nomeCompleto}' para a área de transferência.`);
-        enviarLog("info", `Clique no link abaixo para copiar manualmente:`);
-        enviarLog("copia", `${nomeCompleto}`);
+        enviarLog("info", "Use o nome clicável acima para copiar manualmente.");
       }
 
       // Clica no botão de impressão
@@ -595,7 +618,8 @@
 
 
   const baixarComNomePersonalizado = async (url, nomeBase) => {
-    enviarLog('info', `Iniciando download com nome: ${nomeBase}`);
+    const nomeSugerido = resolverNomeSugeridoDownload(url, nomeBase);
+    enviarLogNomeCopiavel('Tentando download de ', nomeSugerido);
 
     try {
       const res = await fetch(url);
@@ -615,7 +639,9 @@
 
       if (!jaTemExtensao && extensaoDetectada) {
         nomeFinal += extensaoDetectada;
-        enviarLog('info', `Extensão '${extensaoDetectada}' adicionada ao nome final: ${nomeFinal}`);
+        if (nomeFinal !== nomeSugerido) {
+          enviarLogNomeCopiavel('Nome final ajustado para ', nomeFinal);
+        }
       }
 
       const a = document.createElement('a');
