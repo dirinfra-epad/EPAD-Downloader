@@ -684,3 +684,649 @@
   });
 
 })();
+
+// Dark Theme Manager - Integrado ao content script
+(() => {
+  const STORAGE_KEY = 'epad-dark-mode-enabled';
+  const STYLE_ID = 'epad-dark-theme';
+
+  const getSiteType = () => {
+    const url = window.location.href;
+    if (url.includes('sigadaer.intraer')) return 'SIGADAER';
+    if (url.includes('siloms.intraer')) return 'SILOMS';
+    return null;
+  };
+
+  const readStorage = key => new Promise(resolve => {
+    chrome.storage.local.get([key], result => resolve(result?.[key]));
+  });
+
+  const writeStorage = value => new Promise(resolve => {
+    chrome.storage.local.set(value, () => resolve());
+  });
+
+  const getSigadaerCSS = () => {
+    return `
+    /* Dark Theme - SIGADAER */
+    :root {
+      --dark-bg: #1a1e26;
+      --dark-surface: #242b38;
+      --dark-border: #303b4d;
+      --dark-text: #d1d9e6;
+      --dark-text-muted: #a0aec0;
+      --dark-accent: #4a90e2;
+      --dark-accent-hover: #357abd;
+      --dark-header-bg: #1e2430;
+      --dark-success-bg: #1b4d3e;
+      --dark-success-text: #4ade80;
+    }
+
+    html, body {
+      background-color: var(--dark-bg) !important;
+      color: var(--dark-text) !important;
+    }
+
+    .card, .panel, .bg-light, .bg-white, .well, .modal-content {
+      background-color: var(--dark-surface) !important;
+      border-color: var(--dark-border) !important;
+      color: var(--dark-text) !important;
+    }
+
+    h1, h2, h3, h4, h5, h6, strong, b {
+      color: #ffffff !important;
+    }
+
+    .text-primary, .list-group-item.text-primary {
+      color: #5da9ff !important;
+    }
+
+    .text-warning, .list-group-item.text-warning {
+      color: #ffd072 !important;
+    }
+
+    .text-danger, .list-group-item.text-danger {
+      color: #ff8585 !important;
+    }
+
+    .text-muted, .small, .help-block {
+      color: var(--dark-text-muted) !important;
+    }
+
+    nav, .navbar {
+      background-color: #13171f !important;
+      border-bottom: 1px solid var(--dark-border) !important;
+    }
+
+    .nav-tabs {
+      border-bottom: 2px solid var(--dark-border) !important;
+    }
+
+    .nav-tabs .nav-link.active, .nav-item.active .nav-link {
+      background-color: var(--dark-surface) !important;
+      color: var(--dark-accent) !important;
+      border: 1px solid var(--dark-border) !important;
+      border-bottom: 2px solid var(--dark-accent) !important;
+    }
+
+    th, thead, .table th, [class*="table-header"] {
+      background-color: var(--dark-header-bg) !important;
+      color: #ffffff !important;
+    }
+
+    .btn, button, .page-link {
+      background-color: var(--dark-surface) !important;
+      border: 1px solid var(--dark-border) !important;
+      color: var(--dark-text) !important;
+    }
+
+    .btn:hover, .page-link:hover {
+      background-color: var(--dark-border) !important;
+      color: #ffffff !important;
+      border-color: var(--dark-accent) !important;
+    }
+
+    .page-item.active .page-link {
+      background-color: var(--dark-accent) !important;
+      border-color: var(--dark-accent) !important;
+    }
+
+    .ng-select .ng-select-container, .ng-dropdown-panel {
+      background-color: var(--dark-bg) !important;
+      border-color: var(--dark-border) !important;
+      color: var(--dark-text) !important;
+    }
+
+    .ng-select .ng-input > input {
+      background-color: transparent !important;
+      border: none !important;
+    }
+
+    .badge, .label, [class*="badge"] {
+      background-color: var(--dark-surface) !important;
+      color: var(--dark-accent) !important;
+      border: 1px solid var(--dark-border) !important;
+    }
+
+    .cal-month-view .cal-today {
+      background-color: var(--dark-success-bg) !important;
+      border: none !important;
+    }
+
+    .cal-month-view .cal-today .cal-day-number {
+      color: var(--dark-success-text) !important;
+      font-weight: bold;
+    }
+
+    .cal-month-view .cal-day-cell:hover {
+      background-color: #2d3748 !important;
+    }
+
+    svg, path {
+      fill: currentColor;
+    }
+
+    img {
+      opacity: 0.85;
+      transition: opacity 0.3s;
+    }
+
+    img:hover {
+      opacity: 1;
+    }
+    `;
+  };
+
+  const getSilomsCSS = () => {
+    return `
+    /* Dark Theme - SILOMS */
+    :root {
+      --bg-dark: #1a1e23;
+      --bg-dark-accent: #242a31;
+      --bg-input: #2d353e;
+      --text-primary: #e0e6ed;
+      --text-secondary: #94a3b8;
+      --accent-cyan: #22d3ee;
+      --accent-teal: #14b8a6;
+      --accent-blue: #3b82f6;
+      --border-color: #334155;
+      --hover-bg: #334155;
+    }
+
+    html, body.Form, #MAINFORM {
+      background-color: var(--bg-dark) !important;
+      color: var(--text-primary) !important;
+    }
+
+    table, .tableBody, .tableTopoIn, .Table, #MAINTABLE, #TABLE2, .GridAquisicao2 {
+      background-color: var(--bg-dark) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-color) !important;
+      border-collapse: collapse !important;
+      background-image: none !important;
+    }
+
+    th, .GridAquisicao2Title, .GridHeader, .FreeTableHeader, .Header {
+      background-color: #1e293b !important;
+      color: var(--accent-cyan) !important;
+      border: 1px solid var(--border-color) !important;
+      padding: 10px !important;
+      font-weight: bold !important;
+      background-image: none !important;
+    }
+
+    tr.GridRow, .GridAquisicao2 tr:nth-child(even) {
+      background-color: #1a1e23 !important;
+    }
+
+    tr.GridOddRow, .GridAquisicao2 tr:nth-child(odd) {
+      background-color: #1e293b !important;
+    }
+
+    legend.GroupTitle, .GroupTitle {
+      color: var(--accent-cyan) !important;
+      background-color: #1e293b !important;
+      padding: 4px 12px !important;
+      border-radius: 4px !important;
+      border: 1px solid var(--border-color) !important;
+      font-weight: bold !important;
+    }
+
+    .Attribute, input[type="text"], input[type="password"], select, textarea {
+      background-color: var(--bg-input) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-color) !important;
+      padding: 4px !important;
+      border-radius: 4px !important;
+    }
+
+    .BigButton, input[type="button"].BigButton {
+      background: var(--bg-input) !important;
+      color: var(--accent-cyan) !important;
+      height: auto !important;
+      min-height: 34px !important;
+      padding: 6px 20px !important;
+      margin: 4px !important;
+      border: 1px solid var(--accent-cyan) !important;
+      border-radius: 6px !important;
+      text-transform: uppercase !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      transition: all 0.2s ease-in-out !important;
+    }
+
+    .BigButton:hover {
+      background: var(--accent-cyan) !important;
+      color: var(--bg-dark) !important;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4) !important;
+    }
+
+    #HELPBUTTON, #PRINTBUTTON, #EXCELTBUTTON, #CANCELBUTTON,
+    input[type="image"][src*=".bmp"], input[type="image"][src*=".gif"], img.Image {
+      filter: invert(0.75) hue-rotate(180deg) brightness(1.1) contrast(1.2) !important;
+      background-color: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      width: auto !important;
+      height: auto !important;
+      transition: all 0.2s ease !important;
+    }
+
+    #CANCELBUTTON:hover {
+      filter: invert(0.5) sepia(1) saturate(3) hue-rotate(-50deg) !important;
+      transform: scale(1.1) !important;
+    }
+
+    .TextBlock, .ReadonlyAttribute, span, td {
+      color: var(--text-primary) !important;
+    }
+    `;
+  };
+
+  const getCssBySite = siteType => {
+    if (siteType === 'SIGADAER') return getSigadaerCSS();
+    if (siteType === 'SILOMS') return getSilomsCSS();
+    return '';
+  };
+
+  const applyDarkTheme = () => {
+    const siteType = getSiteType();
+    if (!siteType) return false;
+
+    const head = document.head || document.getElementsByTagName('head')[0];
+    if (!head) return false;
+
+    const css = getCssBySite(siteType);
+    if (!css) return false;
+
+    let style = document.getElementById(STYLE_ID);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      head.appendChild(style);
+    }
+
+    style.setAttribute('data-site', siteType);
+    style.textContent = css;
+    return true;
+  };
+
+  const removeDarkTheme = () => {
+    const style = document.getElementById(STYLE_ID);
+    if (style) style.remove();
+  };
+
+  const getDarkThemeStatus = async () => {
+    const saved = await readStorage(STORAGE_KEY);
+    return Boolean(saved);
+  };
+
+  const setDarkThemeStatus = async enabled => {
+    await writeStorage({ [STORAGE_KEY]: enabled });
+
+    if (enabled) {
+      const applied = applyDarkTheme();
+      return { success: true, enabled, applied };
+    }
+
+    removeDarkTheme();
+    return { success: true, enabled, applied: true };
+  };
+
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === 'toggle_dark_theme') {
+      (async () => {
+        const enabled = await getDarkThemeStatus();
+        const response = await setDarkThemeStatus(!enabled);
+        sendResponse(response);
+      })();
+      return true;
+    }
+
+    if (msg.action === 'set_dark_theme') {
+      (async () => {
+        const response = await setDarkThemeStatus(Boolean(msg.enabled));
+        sendResponse(response);
+      })();
+      return true;
+    }
+
+    if (msg.action === 'get_dark_theme_status') {
+      (async () => {
+        const enabled = await getDarkThemeStatus();
+        sendResponse({ enabled });
+      })();
+      return true;
+    }
+  });
+
+  const initDarkTheme = async () => {
+    const siteType = getSiteType();
+    if (!siteType) return;
+
+    const enabled = await getDarkThemeStatus();
+    if (enabled) applyDarkTheme();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDarkTheme, { once: true });
+  } else {
+    initDarkTheme();
+  }
+})();
+
+// Painel flutuante com botao Expandir/Recolher
+(() => {
+  const siteSuportado = window.location.hostname.includes('sigadaer.intraer')
+    || window.location.hostname.includes('siloms.intraer');
+
+  if (!siteSuportado) return;
+
+  const ROOT_ID = 'epad-floating-root';
+  const STYLE_ID = 'epad-floating-ui-style';
+  const BUTTON_ID = 'epad-floating-toggle';
+  const PANEL_ID = 'epad-floating-panel';
+  const HEADER_ID = 'epad-floating-panel-header';
+  const CLOSE_ID = 'epad-floating-panel-close';
+  const IFRAME_ID = 'epad-floating-panel-iframe';
+  const POSITION_KEY = `epad-floating-position-${window.location.hostname}`;
+
+  const readStorage = key => new Promise(resolve => {
+    chrome.storage.local.get([key], result => resolve(result?.[key]));
+  });
+
+  const writeStorage = value => new Promise(resolve => {
+    chrome.storage.local.set(value, () => resolve());
+  });
+
+  const injectStyles = () => {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      #${ROOT_ID} {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2147483000;
+      }
+
+      #${BUTTON_ID} {
+        pointer-events: auto;
+        position: fixed;
+        right: 16px;
+        bottom: 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(120, 163, 224, 0.62);
+        background: linear-gradient(150deg, rgba(15, 28, 48, 0.9) 0%, rgba(17, 31, 56, 0.75) 100%);
+        color: #d8e8ff;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(8px);
+        cursor: pointer;
+      }
+
+      #${BUTTON_ID}:hover {
+        border-color: rgba(160, 202, 255, 0.9);
+        background: linear-gradient(150deg, rgba(20, 37, 64, 0.93) 0%, rgba(24, 43, 73, 0.8) 100%);
+      }
+
+      #${BUTTON_ID} img {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        object-fit: cover;
+      }
+
+      #${PANEL_ID} {
+        pointer-events: auto;
+        position: fixed;
+        width: 390px;
+        height: 600px;
+        min-width: 320px;
+        min-height: 360px;
+        background: rgba(8, 14, 25, 0.5);
+        border: 1px solid rgba(118, 158, 224, 0.56);
+        border-radius: 14px;
+        box-shadow: 0 24px 36px -20px rgba(0, 0, 0, 0.98);
+        backdrop-filter: blur(10px);
+        display: none;
+        overflow: hidden;
+      }
+
+      #${PANEL_ID}.is-open {
+        display: block;
+      }
+
+      #${HEADER_ID} {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        background: linear-gradient(145deg, rgba(19, 33, 55, 0.9) 0%, rgba(13, 24, 43, 0.88) 100%);
+        border-bottom: 1px solid rgba(120, 159, 217, 0.5);
+        cursor: move;
+        user-select: none;
+      }
+
+      #${HEADER_ID} .title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #d8e8ff;
+      }
+
+      #${HEADER_ID} .title img {
+        width: 14px;
+        height: 14px;
+      }
+
+      #${CLOSE_ID} {
+        border: 1px solid rgba(123, 166, 228, 0.6);
+        background: rgba(18, 34, 58, 0.88);
+        color: #d8e8ff;
+        border-radius: 8px;
+        width: 28px;
+        height: 24px;
+        line-height: 1;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      #${CLOSE_ID}:hover {
+        background: rgba(30, 54, 90, 0.95);
+      }
+
+      #${IFRAME_ID} {
+        width: 100%;
+        height: calc(100% - 42px);
+        border: 0;
+        background: transparent;
+        padding: 4px
+      }
+
+      @media (max-width: 640px) {
+        #${PANEL_ID} {
+          width: calc(100vw - 16px);
+          height: calc(100vh - 88px);
+          left: 8px !important;
+          top: 8px !important;
+        }
+      }
+    `;
+
+    document.documentElement.appendChild(style);
+  };
+
+  const clampPosition = (left, top, panel) => {
+    const panelWidth = panel.offsetWidth || 390;
+    const panelHeight = panel.offsetHeight || 600;
+    const min = 8;
+
+    const maxLeft = Math.max(min, window.innerWidth - panelWidth - min);
+    const maxTop = Math.max(min, window.innerHeight - panelHeight - min);
+
+    return {
+      left: Math.min(Math.max(min, left), maxLeft),
+      top: Math.min(Math.max(min, top), maxTop)
+    };
+  };
+
+  const applyPosition = (panel, position) => {
+    const defaultLeft = Math.max(8, window.innerWidth - 410);
+    const defaultTop = 70;
+
+    const left = Number.isFinite(position?.left) ? position.left : defaultLeft;
+    const top = Number.isFinite(position?.top) ? position.top : defaultTop;
+    const normalized = clampPosition(left, top, panel);
+
+    panel.style.left = `${normalized.left}px`;
+    panel.style.top = `${normalized.top}px`;
+    return normalized;
+  };
+
+  const createUI = async () => {
+    if (document.getElementById(ROOT_ID)) return;
+
+    injectStyles();
+
+    const root = document.createElement('div');
+    root.id = ROOT_ID;
+
+    const button = document.createElement('button');
+    button.id = BUTTON_ID;
+    button.type = 'button';
+    button.title = 'Expandir/Recolher';
+    button.innerHTML = `
+      <img src="${chrome.runtime.getURL('icon.png')}" alt="" />
+      <span>Expandir/Recolher</span>
+    `;
+
+    const panel = document.createElement('section');
+    panel.id = PANEL_ID;
+
+    const header = document.createElement('header');
+    header.id = HEADER_ID;
+    header.innerHTML = `
+      <span class="title">
+        <img src="${chrome.runtime.getURL('icon.png')}" alt="" />
+        EPAD Downloader
+      </span>
+      <button id="${CLOSE_ID}" type="button" aria-label="Fechar painel">×</button>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.id = IFRAME_ID;
+    iframe.src = chrome.runtime.getURL('popup/index.html?embedded=1');
+    iframe.setAttribute('title', 'EPAD Downloader');
+    iframe.setAttribute('allow', 'clipboard-write');
+
+    panel.appendChild(header);
+    panel.appendChild(iframe);
+    root.appendChild(button);
+    root.appendChild(panel);
+    document.documentElement.appendChild(root);
+
+    const closeButton = header.querySelector(`#${CLOSE_ID}`);
+
+    const savedPosition = await readStorage(POSITION_KEY);
+    applyPosition(panel, savedPosition);
+
+    const togglePanel = forceState => {
+      const shouldOpen = typeof forceState === 'boolean'
+        ? forceState
+        : !panel.classList.contains('is-open');
+
+      panel.classList.toggle('is-open', shouldOpen);
+    };
+
+    button.addEventListener('click', () => {
+      togglePanel();
+    });
+
+    closeButton.addEventListener('click', () => {
+      togglePanel(false);
+    });
+
+    let dragging = null;
+
+    const onMouseMove = event => {
+      if (!dragging) return;
+      const dx = event.clientX - dragging.startX;
+      const dy = event.clientY - dragging.startY;
+      const next = clampPosition(dragging.left + dx, dragging.top + dy, panel);
+      panel.style.left = `${next.left}px`;
+      panel.style.top = `${next.top}px`;
+    };
+
+    const onMouseUp = async () => {
+      if (!dragging) return;
+      dragging = null;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      await writeStorage({
+        [POSITION_KEY]: {
+          left: panel.offsetLeft,
+          top: panel.offsetTop
+        }
+      });
+    };
+
+    header.addEventListener('mousedown', event => {
+      if (event.button !== 0) return;
+      if (event.target === closeButton) return;
+
+      dragging = {
+        startX: event.clientX,
+        startY: event.clientY,
+        left: panel.offsetLeft,
+        top: panel.offsetTop
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      event.preventDefault();
+    });
+
+    window.addEventListener('resize', () => {
+      applyPosition(panel, { left: panel.offsetLeft, top: panel.offsetTop });
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createUI, { once: true });
+  } else {
+    createUI();
+  }
+})();

@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
   "name": "EPAD Downloader",
-  "version": "2.1.0",
+  "version": "2.0.1",
   "description": "Baixa documentos automaticamente com nomes organizados no SIGADAER e SILOMS.",
-  "permissions": ["scripting", "activeTab", "tabs"],
+  "permissions": ["scripting", "activeTab", "tabs", "storage"],
   "host_permissions": [
     "*://*.sigadaer.intraer/*",
-    "*://*.siloms.intraer/*"
+    "*://*.siloms.intraer/*",
+    "https://api.github.com/*",
+    "https://dirinfra-epad.github.io/*"
   ],
   "action": {
-    "default_popup": "popup/index.html",
+    "default_title": "EPAD Downloader",
     "default_icon": "icon_inactive.png"
   },
   "content_scripts": [
@@ -17,6 +19,12 @@
       "matches": ["*://*.sigadaer.intraer/*", "*://*.siloms.intraer/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup/*", "releaseData.js", "icon.png"],
+      "matches": ["*://*.sigadaer.intraer/*", "*://*.siloms.intraer/*"]
     }
   ],
   "icons": {
