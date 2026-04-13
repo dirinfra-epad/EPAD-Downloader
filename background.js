@@ -28,6 +28,17 @@ const atualizarIconeDaAba = async (tabId, url = '') => {
   }
 };
 
+const enviarMensagemParaAba = async (tabId, mensagem) => {
+  if (tabId === undefined) return null;
+
+  try {
+    return await chrome.tabs.sendMessage(tabId, mensagem);
+  } catch (err) {
+    console.warn(`Nao foi possivel enviar mensagem para a aba ${tabId}:`, err);
+    return null;
+  }
+};
+
 const sincronizarAbasAbertas = async () => {
   try {
     const abas = await chrome.tabs.query({});
@@ -64,6 +75,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === 'complete') {
     atualizarIconeDaAba(tabId, novaUrl);
   }
+});
+
+chrome.action.onClicked.addListener(async tab => {
+  const tabId = tab?.id;
+  const url = tab?.url || '';
+
+  if (tabId === undefined || !ehUrlSuportada(url)) return;
+
+  await enviarMensagemParaAba(tabId, { action: 'toggle_floating_panel_from_action' });
 });
 
 // Listener para mensagens (alteracao de icone)

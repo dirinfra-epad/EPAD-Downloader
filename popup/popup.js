@@ -199,9 +199,7 @@ const iniciarChecagemAtualizacao = async () => {
     const atualizacaoDiv = document.getElementById('atualizacao');
     if (!atualizacaoDiv) return;
 
-    const linkAtualizacao = data.url && data.url !== '#'
-      ? data.url
-      : `https://dirinfra-epad.github.io/EPAD-Downloader/releases/?version=${versaoAtual}`;
+    const linkAtualizacao = `https://dirinfra-epad.github.io/EPAD-Downloader/releases/?version=${versaoAtual}`;
 
     atualizacaoDiv.innerHTML = `
       <span>Nova versão v${data.version} disponível!<br/></span>
@@ -212,6 +210,7 @@ const iniciarChecagemAtualizacao = async () => {
         Atualizar para a nova versão
       </a>
     `;
+
   } catch (err) {
     if (isContextInvalidError(err)) return;
   }

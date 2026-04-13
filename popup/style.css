@@ -12,14 +12,23 @@
   --accent: #8594ff;
   --ok: #36c28d;
   --error: #ff6f6f;
+  --scrollbar-track: rgba(11, 20, 34, 0.9);
+  --scrollbar-thumb: rgba(98, 173, 255, 0.92);
+  --scrollbar-thumb-hover: rgba(63, 129, 212, 0.82);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+body {
   padding: 10px;
   background: radial-gradient(circle at 15% 10%, rgba(55, 96, 170, 0.3) 0%, rgba(8, 14, 25, 0.9) 55%);
   color: var(--ink);
@@ -27,9 +36,44 @@ body {
   font-size: 14px;
 }
 
+html {
+  background: transparent;
+}
+
 body.embedded-floating {
   padding: 0;
   background: transparent;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#logConsole::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+#logConsole::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+#logConsole::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, rgba(44, 104, 180, 0.95) 100%);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+#logConsole::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover) 0%, rgba(72, 144, 231, 0.98) 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 #Popup {
@@ -241,9 +285,20 @@ body.embedded-floating {
   outline: none;
 }
 
+#modeloSelect {
+  color-scheme: dark;
+}
+
 #modeloSelect > option {
   text-align: left;
-  color: #10253f;
+  color: #eaf3ff;
+  background-color: #14243a;
+}
+
+#modeloSelect > option:checked,
+#modeloSelect > option:hover {
+  color: #f5fbff;
+  background-color: #245189;
 }
 
 #logConsole {
@@ -252,6 +307,8 @@ body.embedded-floating {
   font-size: 12px;
   max-height: 320px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   box-shadow: inset 0 0 14px -9px rgba(0, 0, 0, 0.8);
   padding: 10px;
   background-color: rgba(14, 24, 40, 0.82);
@@ -323,6 +380,11 @@ body.embedded-floating {
   border-radius: 10px;
   background: rgba(15, 26, 44, 0.75);
   backdrop-filter: blur(8px);
+}
+#creditosDetalhados a {
+  color: #79bfff;
+  text-decoration: underline;
+  font-weight: 700;
 }
 
 .labelSequencial {

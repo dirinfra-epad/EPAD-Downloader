@@ -1034,7 +1034,7 @@
   }
 })();
 
-// Painel flutuante com botao Expandir/Recolher
+// Painel flutuante com lancador por imagem
 (() => {
   const siteSuportado = window.location.hostname.includes('sigadaer.intraer')
     || window.location.hostname.includes('siloms.intraer');
@@ -1043,12 +1043,22 @@
 
   const ROOT_ID = 'epad-floating-root';
   const STYLE_ID = 'epad-floating-ui-style';
-  const BUTTON_ID = 'epad-floating-toggle';
+  const BUTTON_ID = 'epad-floating-launcher';
+  const BUTTON_MAIN_ID = 'epad-floating-launcher-main';
+  const BUTTON_DISMISS_ID = 'epad-floating-launcher-dismiss';
   const PANEL_ID = 'epad-floating-panel';
   const HEADER_ID = 'epad-floating-panel-header';
   const CLOSE_ID = 'epad-floating-panel-close';
   const IFRAME_ID = 'epad-floating-panel-iframe';
-  const POSITION_KEY = `epad-floating-position-${window.location.hostname}`;
+  const PANEL_POSITION_KEY = `epad-floating-position-${window.location.hostname}`;
+  const BUTTON_POSITION_KEY = `epad-floating-button-position-${window.location.hostname}`;
+  const PREFS_KEY = `epad-floating-preferences-${window.location.hostname}`;
+  const PANEL_DEFAULT_WIDTH = 390;
+  const PANEL_DEFAULT_HEIGHT = 600;
+  const BUTTON_DEFAULT_WIDTH = 58;
+  const BUTTON_DEFAULT_HEIGHT = 58;
+  const VIEWPORT_MARGIN = 12;
+  const EXTENSION_VERSION = chrome.runtime.getManifest().version;
 
   const readStorage = key => new Promise(resolve => {
     chrome.storage.local.get([key], result => resolve(result?.[key]));
@@ -1057,6 +1067,28 @@
   const writeStorage = value => new Promise(resolve => {
     chrome.storage.local.set(value, () => resolve());
   });
+
+  const waitForDocumentReady = () => {
+    if (document.readyState !== 'loading') return Promise.resolve();
+
+    return new Promise(resolve => {
+      document.addEventListener('DOMContentLoaded', resolve, { once: true });
+    });
+  };
+
+  const normalizePreferences = prefs => ({
+    activated: Boolean(prefs?.activated),
+    buttonDismissed: Boolean(prefs?.buttonDismissed)
+  });
+
+  const savePreferences = prefs => {
+    return writeStorage({
+      [PREFS_KEY]: {
+        activated: Boolean(prefs?.activated),
+        buttonDismissed: Boolean(prefs?.buttonDismissed)
+      }
+    });
+  };
 
   const injectStyles = () => {
     if (document.getElementById(STYLE_ID)) return;
@@ -1074,34 +1106,60 @@
       #${BUTTON_ID} {
         pointer-events: auto;
         position: fixed;
-        right: 16px;
-        bottom: 18px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid rgba(120, 163, 224, 0.62);
-        background: linear-gradient(150deg, rgba(15, 28, 48, 0.9) 0%, rgba(17, 31, 56, 0.75) 100%);
-        color: #d8e8ff;
-        border-radius: 999px;
-        padding: 8px 12px;
-        font-family: Verdana, Arial, Helvetica, sans-serif;
-        font-size: 12px;
-        font-weight: 700;
-        box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.95);
-        backdrop-filter: blur(8px);
+        width: 58px;
+        height: 58px;
+        display: none;
+        cursor: grab;
+        user-select: none;
+      }
+
+      #${BUTTON_ID}.is-visible {
+        display: block;
+      }
+
+      #${BUTTON_MAIN_ID} {
+        width: 45px;
+        height: 45px;
+        padding: 0;
+        margin: 7px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.95);
         cursor: pointer;
       }
 
-      #${BUTTON_ID}:hover {
-        border-color: rgba(160, 202, 255, 0.9);
-        background: linear-gradient(150deg, rgba(20, 37, 64, 0.93) 0%, rgba(24, 43, 73, 0.8) 100%);
+      #${BUTTON_MAIN_ID} img {
+        width: 45px;
+        height: 45px;
+        display: block;
+        border-radius: 12px;
+        object-fit: cover;
       }
 
-      #${BUTTON_ID} img {
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
-        object-fit: cover;
+      #${BUTTON_MAIN_ID}:hover img {
+        filter: brightness(1.05);
+      }
+
+      #${BUTTON_DISMISS_ID} {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: 1px solid rgba(123, 166, 228, 0.65);
+        border-radius: 999px;
+        background: rgba(16, 29, 49, 0.94);
+        color: #d8e8ff;
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      #${BUTTON_DISMISS_ID}:hover {
+        background: rgba(28, 49, 83, 0.98);
       }
 
       #${PANEL_ID} {
@@ -1146,6 +1204,12 @@
         color: #d8e8ff;
       }
 
+      #${HEADER_ID} .version {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9fbce9;
+      }
+
       #${HEADER_ID} .title img {
         width: 14px;
         height: 14px;
@@ -1172,15 +1236,15 @@
         height: calc(100% - 42px);
         border: 0;
         background: transparent;
-        padding: 4px
+        padding: 4px;
       }
 
       @media (max-width: 640px) {
         #${PANEL_ID} {
-          width: calc(100vw - 16px);
-          height: calc(100vh - 88px);
-          left: 8px !important;
-          top: 8px !important;
+          width: calc(100vw - 24px);
+          height: calc(100vh - 96px);
+          left: 12px !important;
+          top: 12px !important;
         }
       }
     `;
@@ -1188,49 +1252,79 @@
     document.documentElement.appendChild(style);
   };
 
-  const clampPosition = (left, top, panel) => {
-    const panelWidth = panel.offsetWidth || 390;
-    const panelHeight = panel.offsetHeight || 600;
-    const min = 8;
-
-    const maxLeft = Math.max(min, window.innerWidth - panelWidth - min);
-    const maxTop = Math.max(min, window.innerHeight - panelHeight - min);
-
+  const getElementSize = (element, fallbackWidth, fallbackHeight) => {
+    const rect = element.getBoundingClientRect();
     return {
-      left: Math.min(Math.max(min, left), maxLeft),
-      top: Math.min(Math.max(min, top), maxTop)
+      width: Math.ceil(rect.width) || fallbackWidth,
+      height: Math.ceil(rect.height) || fallbackHeight
     };
   };
 
-  const applyPosition = (panel, position) => {
-    const defaultLeft = Math.max(8, window.innerWidth - 410);
-    const defaultTop = 70;
+  const clampPosition = (left, top, width, height) => {
+    const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - width - VIEWPORT_MARGIN);
+    const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - height - VIEWPORT_MARGIN);
 
-    const left = Number.isFinite(position?.left) ? position.left : defaultLeft;
-    const top = Number.isFinite(position?.top) ? position.top : defaultTop;
-    const normalized = clampPosition(left, top, panel);
+    return {
+      left: Math.min(Math.max(VIEWPORT_MARGIN, left), maxLeft),
+      top: Math.min(Math.max(VIEWPORT_MARGIN, top), maxTop)
+    };
+  };
 
-    panel.style.left = `${normalized.left}px`;
-    panel.style.top = `${normalized.top}px`;
+  const applyPosition = (element, position, fallbackPosition, fallbackWidth, fallbackHeight) => {
+    const defaultPosition = fallbackPosition();
+    const left = Number.isFinite(position?.left) ? position.left : defaultPosition.left;
+    const top = Number.isFinite(position?.top) ? position.top : defaultPosition.top;
+    const size = getElementSize(element, fallbackWidth, fallbackHeight);
+    const normalized = clampPosition(left, top, size.width, size.height);
+
+    element.style.left = `${normalized.left}px`;
+    element.style.top = `${normalized.top}px`;
     return normalized;
   };
 
+  const getDefaultPanelPosition = () => ({
+    left: Math.max(VIEWPORT_MARGIN, window.innerWidth - PANEL_DEFAULT_WIDTH - 24),
+    top: 70
+  });
+
+  const getDefaultButtonPosition = () => ({
+    left: Math.max(VIEWPORT_MARGIN, window.innerWidth - BUTTON_DEFAULT_WIDTH - 20),
+    top: Math.max(VIEWPORT_MARGIN, window.innerHeight - BUTTON_DEFAULT_HEIGHT - 28)
+  });
+
+  let uiApi = null;
+  let uiPromise = null;
+
   const createUI = async () => {
-    if (document.getElementById(ROOT_ID)) return;
+    if (uiApi) return uiApi;
 
     injectStyles();
+
+    const existingRoot = document.getElementById(ROOT_ID);
+    if (existingRoot) existingRoot.remove();
 
     const root = document.createElement('div');
     root.id = ROOT_ID;
 
-    const button = document.createElement('button');
-    button.id = BUTTON_ID;
-    button.type = 'button';
-    button.title = 'Expandir/Recolher';
-    button.innerHTML = `
-      <img src="${chrome.runtime.getURL('icon.png')}" alt="" />
-      <span>Expandir/Recolher</span>
-    `;
+    const launcher = document.createElement('div');
+    launcher.id = BUTTON_ID;
+
+    const launcherButton = document.createElement('button');
+    launcherButton.id = BUTTON_MAIN_ID;
+    launcherButton.type = 'button';
+    launcherButton.title = 'Abrir painel EPAD Downloader';
+    launcherButton.setAttribute('aria-label', 'Abrir painel EPAD Downloader');
+    launcherButton.innerHTML = `<img src="${chrome.runtime.getURL('icon.png')}" alt="EPAD Downloader" />`;
+
+    const launcherDismiss = document.createElement('button');
+    launcherDismiss.id = BUTTON_DISMISS_ID;
+    launcherDismiss.type = 'button';
+    launcherDismiss.title = 'Ocultar botao';
+    launcherDismiss.setAttribute('aria-label', 'Ocultar botao');
+    launcherDismiss.innerHTML = '&times;';
+
+    launcher.appendChild(launcherButton);
+    launcher.appendChild(launcherDismiss);
 
     const panel = document.createElement('section');
     panel.id = PANEL_ID;
@@ -1240,7 +1334,7 @@
     header.innerHTML = `
       <span class="title">
         <img src="${chrome.runtime.getURL('icon.png')}" alt="" />
-        EPAD Downloader
+        EPAD Downloader <span class="version">v${EXTENSION_VERSION}</span>
       </span>
       <button id="${CLOSE_ID}" type="button" aria-label="Fechar painel">×</button>
     `;
@@ -1253,80 +1347,191 @@
 
     panel.appendChild(header);
     panel.appendChild(iframe);
-    root.appendChild(button);
+    root.appendChild(launcher);
     root.appendChild(panel);
     document.documentElement.appendChild(root);
 
     const closeButton = header.querySelector(`#${CLOSE_ID}`);
 
-    const savedPosition = await readStorage(POSITION_KEY);
-    applyPosition(panel, savedPosition);
+    const [savedPanelPosition, savedButtonPosition, savedPrefs] = await Promise.all([
+      readStorage(PANEL_POSITION_KEY),
+      readStorage(BUTTON_POSITION_KEY),
+      readStorage(PREFS_KEY)
+    ]);
 
-    const togglePanel = forceState => {
-      const shouldOpen = typeof forceState === 'boolean'
-        ? forceState
-        : !panel.classList.contains('is-open');
+    const preferences = normalizePreferences(savedPrefs);
+    applyPosition(panel, savedPanelPosition, getDefaultPanelPosition, PANEL_DEFAULT_WIDTH, PANEL_DEFAULT_HEIGHT);
+    applyPosition(launcher, savedButtonPosition, getDefaultButtonPosition, BUTTON_DEFAULT_WIDTH, BUTTON_DEFAULT_HEIGHT);
 
+    const syncLauncherVisibility = () => {
+      const shouldShowLauncher = !panel.classList.contains('is-open')
+        && preferences.activated
+        && !preferences.buttonDismissed;
+
+      launcher.classList.toggle('is-visible', shouldShowLauncher);
+    };
+
+    const setPanelOpen = shouldOpen => {
       panel.classList.toggle('is-open', shouldOpen);
+      syncLauncherVisibility();
+      return shouldOpen;
     };
 
-    button.addEventListener('click', () => {
-      togglePanel();
-    });
+    const persistPosition = key => {
+      const target = key === PANEL_POSITION_KEY ? panel : launcher;
 
-    closeButton.addEventListener('click', () => {
-      togglePanel(false);
-    });
-
-    let dragging = null;
-
-    const onMouseMove = event => {
-      if (!dragging) return;
-      const dx = event.clientX - dragging.startX;
-      const dy = event.clientY - dragging.startY;
-      const next = clampPosition(dragging.left + dx, dragging.top + dy, panel);
-      panel.style.left = `${next.left}px`;
-      panel.style.top = `${next.top}px`;
-    };
-
-    const onMouseUp = async () => {
-      if (!dragging) return;
-      dragging = null;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-
-      await writeStorage({
-        [POSITION_KEY]: {
-          left: panel.offsetLeft,
-          top: panel.offsetTop
+      return writeStorage({
+        [key]: {
+          left: Math.round(Number.parseFloat(target.style.left) || 0),
+          top: Math.round(Number.parseFloat(target.style.top) || 0)
         }
       });
     };
 
-    header.addEventListener('mousedown', event => {
+    const openPanel = () => setPanelOpen(true);
+    const closePanel = () => setPanelOpen(false);
+
+    let dragging = null;
+    let suppressLauncherClick = false;
+
+    const onMouseMove = event => {
+      if (!dragging) return;
+
+      const dx = event.clientX - dragging.startX;
+      const dy = event.clientY - dragging.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dragging.moved = true;
+      }
+
+      const size = getElementSize(dragging.element, dragging.fallbackWidth, dragging.fallbackHeight);
+      const next = clampPosition(dragging.left + dx, dragging.top + dy, size.width, size.height);
+      dragging.element.style.left = `${next.left}px`;
+      dragging.element.style.top = `${next.top}px`;
+    };
+
+    const onMouseUp = async () => {
+      if (!dragging) return;
+
+      const finishedDrag = dragging;
+      dragging = null;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      if (finishedDrag.moved) {
+        if (finishedDrag.element === launcher) {
+          suppressLauncherClick = true;
+          window.setTimeout(() => {
+            suppressLauncherClick = false;
+          }, 0);
+        }
+
+        await persistPosition(finishedDrag.storageKey);
+      }
+    };
+
+    const startDrag = (event, element, storageKey, fallbackWidth, fallbackHeight) => {
       if (event.button !== 0) return;
-      if (event.target === closeButton) return;
 
       dragging = {
+        element,
+        storageKey,
+        fallbackWidth,
+        fallbackHeight,
         startX: event.clientX,
         startY: event.clientY,
-        left: panel.offsetLeft,
-        top: panel.offsetTop
+        left: element.offsetLeft,
+        top: element.offsetTop,
+        moved: false
       };
 
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
       event.preventDefault();
+    };
+
+    launcherButton.addEventListener('click', () => {
+      if (suppressLauncherClick) return;
+
+      preferences.activated = true;
+      openPanel();
+    });
+
+    launcherDismiss.addEventListener('click', async event => {
+      event.stopPropagation();
+      preferences.buttonDismissed = true;
+      await savePreferences(preferences);
+      syncLauncherVisibility();
+    });
+
+    closeButton.addEventListener('click', () => {
+      closePanel();
+    });
+
+    header.addEventListener('mousedown', event => {
+      if (event.target === closeButton) return;
+      startDrag(event, panel, PANEL_POSITION_KEY, PANEL_DEFAULT_WIDTH, PANEL_DEFAULT_HEIGHT);
+    });
+
+    launcher.addEventListener('mousedown', event => {
+      if (event.target === launcherDismiss) return;
+      startDrag(event, launcher, BUTTON_POSITION_KEY, BUTTON_DEFAULT_WIDTH, BUTTON_DEFAULT_HEIGHT);
     });
 
     window.addEventListener('resize', () => {
-      applyPosition(panel, { left: panel.offsetLeft, top: panel.offsetTop });
+      applyPosition(
+        panel,
+        { left: panel.offsetLeft, top: panel.offsetTop },
+        getDefaultPanelPosition,
+        PANEL_DEFAULT_WIDTH,
+        PANEL_DEFAULT_HEIGHT
+      );
+
+      applyPosition(
+        launcher,
+        { left: launcher.offsetLeft, top: launcher.offsetTop },
+        getDefaultButtonPosition,
+        BUTTON_DEFAULT_WIDTH,
+        BUTTON_DEFAULT_HEIGHT
+      );
     });
+
+    syncLauncherVisibility();
+
+    uiApi = {
+      async handleActionToggle() {
+        preferences.activated = true;
+        preferences.buttonDismissed = false;
+        await savePreferences(preferences);
+
+        const isOpen = setPanelOpen(!panel.classList.contains('is-open'));
+        return { success: true, isOpen };
+      }
+    };
+
+    return uiApi;
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createUI, { once: true });
-  } else {
-    createUI();
-  }
+  const ensureUI = async () => {
+    await waitForDocumentReady();
+
+    if (!uiPromise) {
+      uiPromise = createUI();
+    }
+
+    return uiPromise;
+  };
+
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action !== 'toggle_floating_panel_from_action') return undefined;
+
+    (async () => {
+      const ui = await ensureUI();
+      const response = await ui.handleActionToggle();
+      sendResponse(response);
+    })();
+
+    return true;
+  });
+
+  ensureUI();
 })();
