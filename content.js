@@ -518,17 +518,17 @@
       }
 
       // Copia o nome do arquivo para o clipboard
-      const nomeCompleto = nomeArquivo;
+      //const nomeCompleto = nomeArquivo;
 
-      enviarLogNomeCopiavel('Tentando download de ', nomeCompleto);
+      enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}`);
 
-      const copiado = await copiarParaClipboard(nomeCompleto);
+      const copiado = await copiarParaClipboard(`${DATA}_${ID}`);
 
       if (copiado) {
-        enviarLog("info", `Nome do arquivo copiado para área de transferência: "${nomeCompleto}".`);
+        enviarLog("info", `Nome do arquivo copiado para área de transferência: "${DATA}_${ID}".`);
         enviarLog("info", "Cole o nome (Ctrl+V) ao renomear o arquivo baixado!");
       } else {
-        enviarLog("erro", `Não foi possível copiar o nome '${nomeCompleto}' para a área de transferência.`);
+        enviarLog("erro", `Não foi possível copiar o nome '${DATA}_${ID}' para a área de transferência.`);
         enviarLog("info", "Use o nome clicável acima para copiar manualmente.");
       }
 
@@ -612,14 +612,14 @@
       if (ASSUNTO === titulo || ASSUNTO === titulo + '_minuta') nomeBase = nomeArquivo; // Documento principal
       else nomeBase = `${DATA}_${ID}_${titulo}`.slice(0, 250); // Anexos
 
-      await baixarComNomePersonalizado(pdfUrl, nomeBase);
+      await baixarComNomePersonalizado(pdfUrl, nomeBase, DATA, ID);
     }
   };
 
 
-  const baixarComNomePersonalizado = async (url, nomeBase) => {
+  const baixarComNomePersonalizado = async (url, nomeBase, DATA, ID) => {
     const nomeSugerido = resolverNomeSugeridoDownload(url, nomeBase);
-    enviarLogNomeCopiavel('Tentando download de ', nomeSugerido);
+    enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}`);
 
     try {
       const res = await fetch(url);
@@ -640,7 +640,7 @@
       if (!jaTemExtensao && extensaoDetectada) {
         nomeFinal += extensaoDetectada;
         if (nomeFinal !== nomeSugerido) {
-          enviarLogNomeCopiavel('Nome final ajustado para ', nomeFinal);
+          enviarLogNomeCopiavel('Nome final ajustado para ', `${DATA}_${ID}`);
         }
       }
 

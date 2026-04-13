@@ -96,7 +96,7 @@ const aplicarCorLog = (elemento, tipo) => {
       elemento.style.color = '#dce8ff';
       break;
     default:
-      elemento.style.color = '#8bc8ff';
+      elemento.style.color = '#1e90ff';
       break;
   }
 };

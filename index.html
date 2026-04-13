@@ -120,6 +120,9 @@
       color: var(--accent);
       margin-bottom: 20px;
       text-shadow: 0 0 30px rgba(0, 198, 255, 0.3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .hero p {
@@ -135,6 +138,13 @@
       gap: 30px;
       margin-top: 30px;
       flex-wrap: wrap;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      margin-right: 15px;
+      filter: drop-shadow(0 0 10px rgba(0, 198, 255, 0.5));
     }
 
     .system-badge {
@@ -465,7 +475,7 @@
 
   <!-- Hero Section -->
   <section id="inicio" class="hero">
-    <h1>EPAD Downloader</h1>
+    <h1><img class="logo" src="icon.png" alt="EPAD Downloader">EPAD Downloader</h1>
     <p>Extensão Chrome para facilitar o download de arquivos nos sistemas FAB SIGADAER e SILOMS</p>
     <!-- <div class="systems">
       <div class="system-badge">SIGADAER</div>
