@@ -90,10 +90,16 @@ const aplicarCorLog = (elemento, tipo) => {
       elemento.style.color = 'red';
       break;
     case 'ok':
-      elemento.style.color = 'green';
+      elemento.style.color = '#5ae5ae';
       break;
     case 'info':
       elemento.style.color = '#dce8ff';
+      break;
+    case 'fim':
+      elemento.style.color = '#ccc';
+      elemento.style.display = 'flex';
+      elemento.style.justifyContent = 'center';
+      elemento.style.margin = "20px auto";
       break;
     default:
       elemento.style.color = '#1e90ff';

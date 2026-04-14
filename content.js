@@ -1,4 +1,16 @@
+const isExtensionContextValid = () => {
+  try {
+    return !!chrome?.runtime?.id;
+  } catch {
+    return false;
+  }
+};
+
 (() => {
+  if (!isExtensionContextValid()) {
+    location.reload();
+    return;
+  }
   chrome.runtime.sendMessage({ action: 'verificar_site' });
 
   ///// INÍCIO DO SCRIPT SILOMS ---------------------------------------------------------------
@@ -32,6 +44,11 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
+        if (!isExtensionContextValid()) {
+          location.reload();
+          return;
+        }
+
         chrome.runtime.sendMessage({
           from: 'content_script',
           tipo: 'ok',
@@ -41,6 +58,11 @@
 
         await new Promise(r => setTimeout(r, 500));
       } catch (error) {
+
+        if (!isExtensionContextValid()) {
+          location.reload();
+          return;
+        }
         chrome.runtime.sendMessage({ from: 'content_script', tipo: 'erro', log: `${nome}: ${error.message}` });
       }
     }
@@ -49,6 +71,10 @@
   ///// INÍCIO DO SCRIPT SIGADER ---------------------------------------------------------------
   ///// FUNÇÕES AUXILIARES ------------------------------------------------------------
   const enviarLog = (tipo, msg, extras = {}) => {//envia o status para o popup
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
     chrome.runtime.sendMessage({ from: 'content_script', tipo, log: msg, ...extras });
   };
 
@@ -92,7 +118,7 @@
 
     // Remove espaços duplos (ou múltiplos) e espaços nas bordas
     ASSUNTO = ASSUNTO.replace(/\s+/g, ' ').trim();
-    
+
     // Monta o nome base
     let baseNome = `${DATA}_${ID}_${ORIGEM}-${DESTINO}_${ASSUNTO}.pdf`;
 
@@ -663,7 +689,10 @@
 
   // Listener para mensagem vinda do popup ou background (Aqui que aciona a função quando recebe o clique do popup)
   chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
     if (msg.action === "baixar_pdf") {
       let modelo = msg.modelo;
       if (!modelo) return enviarLog('erro', 'Modelo não definido!');
@@ -676,7 +705,7 @@
 
       await baixarAnexos(titulos, modelo);
 
-      enviarLog("fim", "Processo finalizado!")
+      enviarLog("fim", "---------- PROCESSO FINALIZADO ----------")
     }
     if (msg.action === 'baixar_siloms') {
       baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
@@ -698,11 +727,41 @@
   };
 
   const readStorage = key => new Promise(resolve => {
-    chrome.storage.local.get([key], result => resolve(result?.[key]));
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
+
+    try {
+      chrome.storage.local.get([key], result => {
+        if (chrome.runtime.lastError) {
+          location.reload();
+          return;
+        }
+        resolve(result?.[key]);
+      });
+    } catch (e) {
+      location.reload();
+    }
   });
 
-  const writeStorage = value => new Promise(resolve => {
-    chrome.storage.local.set(value, () => resolve());
+  const writeStorage = value => new Promise((resolve) => {
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
+
+    try {
+      chrome.storage.local.set(value, () => {
+        if (chrome.runtime.lastError) {
+          location.reload();
+          return;
+        }
+        resolve();
+      });
+    } catch (e) {
+      location.reload();
+    }
   });
 
   const getSigadaerCSS = () => {
@@ -1036,12 +1095,15 @@
 
 // Painel flutuante com lancador por imagem
 (() => {
+   if (window !== window.top) return;
+   
   const siteSuportado = window.location.hostname.includes('sigadaer.intraer')
     || window.location.hostname.includes('siloms.intraer');
 
   if (!siteSuportado) return;
 
   const ROOT_ID = 'epad-floating-root';
+  if (document.getElementById(ROOT_ID)) return;
   const STYLE_ID = 'epad-floating-ui-style';
   const BUTTON_ID = 'epad-floating-launcher';
   const BUTTON_MAIN_ID = 'epad-floating-launcher-main';
@@ -1061,11 +1123,41 @@
   const EXTENSION_VERSION = chrome.runtime.getManifest().version;
 
   const readStorage = key => new Promise(resolve => {
-    chrome.storage.local.get([key], result => resolve(result?.[key]));
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
+
+    try {
+      chrome.storage.local.get([key], result => {
+        if (chrome.runtime.lastError) {
+          location.reload();
+          return;
+        }
+        resolve(result?.[key]);
+      });
+    } catch (e) {
+      location.reload();
+    }
   });
 
-  const writeStorage = value => new Promise(resolve => {
-    chrome.storage.local.set(value, () => resolve());
+  const writeStorage = value => new Promise((resolve) => {
+    if (!isExtensionContextValid()) {
+      location.reload();
+      return;
+    }
+
+    try {
+      chrome.storage.local.set(value, () => {
+        if (chrome.runtime.lastError) {
+          location.reload();
+          return;
+        }
+        resolve();
+      });
+    } catch (e) {
+      location.reload();
+    }
   });
 
   const waitForDocumentReady = () => {
@@ -1448,7 +1540,7 @@
       document.addEventListener('mouseup', onMouseUp);
       event.preventDefault();
     };
-
+    
     launcherButton.addEventListener('click', () => {
       if (suppressLauncherClick) return;
 
