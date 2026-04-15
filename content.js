@@ -9,10 +9,7 @@ const isExtensionContextValid = () => {
 (() => {
   if (window !== window.top) return;
 
-  if (!isExtensionContextValid()) {
-    location.reload();
-    return;
-  }
+  if (!isExtensionContextValid()) return;
   chrome.runtime.sendMessage({ action: 'verificar_site' });
 
   ///// INÍCIO DO SCRIPT SILOMS ---------------------------------------------------------------
@@ -46,10 +43,7 @@ const isExtensionContextValid = () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        if (!isExtensionContextValid()) {
-          location.reload();
-          return;
-        }
+        if (!isExtensionContextValid()) return;
 
         chrome.runtime.sendMessage({
           from: 'content_script',
@@ -61,10 +55,7 @@ const isExtensionContextValid = () => {
         await new Promise(r => setTimeout(r, 500));
       } catch (error) {
 
-        if (!isExtensionContextValid()) {
-          location.reload();
-          return;
-        }
+        if (!isExtensionContextValid()) return;
         chrome.runtime.sendMessage({ from: 'content_script', tipo: 'erro', log: `${nome}: ${error.message}` });
       }
     }
@@ -73,10 +64,7 @@ const isExtensionContextValid = () => {
   ///// INÍCIO DO SCRIPT SIGADER ---------------------------------------------------------------
   ///// FUNÇÕES AUXILIARES ------------------------------------------------------------
   const enviarLog = (tipo, msg, extras = {}) => {//envia o status para o popup
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
+    if (!isExtensionContextValid()) return;
     chrome.runtime.sendMessage({ from: 'content_script', tipo, log: msg, ...extras });
   };
 
@@ -548,9 +536,9 @@ const isExtensionContextValid = () => {
       // Copia o nome do arquivo para o clipboard
       //const nomeCompleto = nomeArquivo;
 
-      enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}`);
+      enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}_`);
 
-      const copiado = await copiarParaClipboard(`${DATA}_${ID}`);
+      const copiado = await copiarParaClipboard(`${DATA}_${ID}_`);
 
       if (copiado) {
         enviarLog("info", `Nome do arquivo copiado para área de transferência: "${DATA}_${ID}".`);
@@ -647,7 +635,7 @@ const isExtensionContextValid = () => {
 
   const baixarComNomePersonalizado = async (url, nomeBase, DATA, ID) => {
     const nomeSugerido = resolverNomeSugeridoDownload(url, nomeBase);
-    enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}`);
+    enviarLogNomeCopiavel('Tentando download de ', `${DATA}_${ID}_`);
 
     try {
       const res = await fetch(url);
@@ -668,7 +656,7 @@ const isExtensionContextValid = () => {
       if (!jaTemExtensao && extensaoDetectada) {
         nomeFinal += extensaoDetectada;
         if (nomeFinal !== nomeSugerido) {
-          enviarLogNomeCopiavel('Nome final ajustado para ', `${DATA}_${ID}`);
+          enviarLogNomeCopiavel('Nome final ajustado para ', `${DATA}_${ID}_`);
         }
       }
 
@@ -690,27 +678,30 @@ const isExtensionContextValid = () => {
 
 
   // Listener para mensagem vinda do popup ou background (Aqui que aciona a função quando recebe o clique do popup)
-  chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!isExtensionContextValid()) return;
+
     if (msg.action === "baixar_pdf") {
-      let modelo = msg.modelo;
-      if (!modelo) return enviarLog('erro', 'Modelo não definido!');
+      (async () => {
+        let modelo = msg.modelo;
+        if (!modelo) { enviarLog('erro', 'Modelo não definido!'); return; }
 
-      const dados = await extrairDados();
-      if (!dados) return;
+        const dados = await extrairDados();
+        if (!dados) return;
 
-      const titulos = await extrairTitulos(dados, modelo);
-      if (!titulos) return;
+        const titulos = await extrairTitulos(dados, modelo);
+        if (!titulos) return;
 
-      await baixarAnexos(titulos, modelo);
+        await baixarAnexos(titulos, modelo);
 
-      enviarLog("fim", "---------- PROCESSO FINALIZADO ----------")
+        enviarLog("fim", "---------- PROCESSO FINALIZADO ----------");
+      })();
+      return true;
     }
+
     if (msg.action === 'baixar_siloms') {
       baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
+      return true;
     }
   });
 
@@ -729,41 +720,23 @@ const isExtensionContextValid = () => {
   };
 
   const readStorage = key => new Promise(resolve => {
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
-
+    if (!isExtensionContextValid()) { resolve(undefined); return; }
     try {
       chrome.storage.local.get([key], result => {
-        if (chrome.runtime.lastError) {
-          location.reload();
-          return;
-        }
+        if (chrome.runtime.lastError) { resolve(undefined); return; }
         resolve(result?.[key]);
       });
-    } catch (e) {
-      location.reload();
-    }
+    } catch (e) { resolve(undefined); }
   });
 
   const writeStorage = value => new Promise((resolve) => {
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
-
+    if (!isExtensionContextValid()) { resolve(); return; }
     try {
       chrome.storage.local.set(value, () => {
-        if (chrome.runtime.lastError) {
-          location.reload();
-          return;
-        }
+        if (chrome.runtime.lastError) { resolve(); return; }
         resolve();
       });
-    } catch (e) {
-      location.reload();
-    }
+    } catch (e) { resolve(); }
   });
 
   const getSigadaerCSS = () => {
@@ -1378,41 +1351,23 @@ const isExtensionContextValid = () => {
   const EXTENSION_VERSION = chrome.runtime.getManifest().version;
 
   const readStorage = key => new Promise(resolve => {
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
-
+    if (!isExtensionContextValid()) { resolve(undefined); return; }
     try {
       chrome.storage.local.get([key], result => {
-        if (chrome.runtime.lastError) {
-          location.reload();
-          return;
-        }
+        if (chrome.runtime.lastError) { resolve(undefined); return; }
         resolve(result?.[key]);
       });
-    } catch (e) {
-      location.reload();
-    }
+    } catch (e) { resolve(undefined); }
   });
 
   const writeStorage = value => new Promise((resolve) => {
-    if (!isExtensionContextValid()) {
-      location.reload();
-      return;
-    }
-
+    if (!isExtensionContextValid()) { resolve(); return; }
     try {
       chrome.storage.local.set(value, () => {
-        if (chrome.runtime.lastError) {
-          location.reload();
-          return;
-        }
+        if (chrome.runtime.lastError) { resolve(); return; }
         resolve();
       });
-    } catch (e) {
-      location.reload();
-    }
+    } catch (e) { resolve(); }
   });
 
   const waitForDocumentReady = () => {
