@@ -7,6 +7,8 @@ const isExtensionContextValid = () => {
 };
 
 (() => {
+  if (window !== window.top) return;
+
   if (!isExtensionContextValid()) {
     location.reload();
     return;

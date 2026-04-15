@@ -320,6 +320,22 @@ try {
 
       logEl.appendChild(p);
       logEl.scrollTop = logEl.scrollHeight;
+
+      if (msg.tipo === 'fim') {
+        const limpar = document.createElement('a');
+        limpar.href = '#';
+        limpar.textContent = 'Limpar Console';
+        limpar.className = 'log-copy-link';
+        limpar.style.display = 'block';
+        limpar.style.textAlign = 'center';
+        limpar.style.margin = '10px auto';
+        limpar.addEventListener('click', e => {
+          e.preventDefault();
+          logEl.innerHTML = '';
+          logEl.classList.add('oculto');
+        });
+        logEl.appendChild(limpar);
+      }
     }
   });
 } catch (err) {
