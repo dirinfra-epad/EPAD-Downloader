@@ -695,27 +695,48 @@ const isExtensionContextValid = () => {
 
     if (msg.action === "baixar_pdf") {
       (async () => {
-        let modelo = msg.modelo;
-        if (!modelo) { enviarLog('erro', 'Modelo não definido!'); return; }
+        try {
+          let modelo = msg.modelo;
+          if (!modelo) {
+            enviarLog('erro', 'Modelo não definido!');
+            sendResponse({ success: false, error: 'Modelo não definido' });
+            return;
+          }
 
-        const dados = await extrairDados();
-        if (!dados) return;
+          const dados = await extrairDados();
+          if (!dados) {
+            sendResponse({ success: false, error: 'Falha ao extrair dados' });
+            return;
+          }
 
-        const titulos = await extrairTitulos(dados, modelo);
-        if (!titulos) return;
+          const titulos = await extrairTitulos(dados, modelo);
+          if (!titulos) {
+            sendResponse({ success: false, error: 'Falha ao extrair títulos' });
+            return;
+          }
 
-        await baixarAnexos(titulos, modelo);
-
-        enviarLog("fim", "---------- PROCESSO FINALIZADO ----------");
-        sendResponse({ success: true });
+          await baixarAnexos(titulos, modelo);
+          enviarLog("fim", "---------- PROCESSO FINALIZADO ----------");
+          sendResponse({ success: true });
+        } catch (err) {
+          console.error('Erro ao baixar PDF:', err);
+          enviarLog('erro', `Erro ao baixar: ${err.message}`);
+          sendResponse({ success: false, error: err.message });
+        }
       })();
       return true;
     }
 
     if (msg.action === 'baixar_siloms') {
       (async () => {
-        await baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
-        sendResponse({ success: true });
+        try {
+          await baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
+          sendResponse({ success: true });
+        } catch (err) {
+          console.error('Erro ao baixar SILOMS:', err);
+          enviarLog('erro', `Erro ao baixar SILOMS: ${err.message}`);
+          sendResponse({ success: false, error: err.message });
+        }
       })();
       return true;
     }
@@ -1298,25 +1319,40 @@ const isExtensionContextValid = () => {
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'toggle_dark_theme') {
       (async () => {
-        const enabled = await getDarkThemeStatus();
-        const response = await setDarkThemeStatus(!enabled);
-        sendResponse(response);
+        try {
+          const enabled = await getDarkThemeStatus();
+          const response = await setDarkThemeStatus(!enabled);
+          sendResponse(response);
+        } catch (err) {
+          console.error('Erro ao alternar dark theme:', err);
+          sendResponse({ success: false, error: err.message });
+        }
       })();
       return true;
     }
 
     if (msg.action === 'set_dark_theme') {
       (async () => {
-        const response = await setDarkThemeStatus(Boolean(msg.enabled));
-        sendResponse(response);
+        try {
+          const response = await setDarkThemeStatus(Boolean(msg.enabled));
+          sendResponse(response);
+        } catch (err) {
+          console.error('Erro ao definir dark theme:', err);
+          sendResponse({ success: false, error: err.message });
+        }
       })();
       return true;
     }
 
     if (msg.action === 'get_dark_theme_status') {
       (async () => {
-        const enabled = await getDarkThemeStatus();
-        sendResponse({ enabled });
+        try {
+          const enabled = await getDarkThemeStatus();
+          sendResponse({ enabled });
+        } catch (err) {
+          console.error('Erro ao obter status dark theme:', err);
+          sendResponse({ success: false, error: err.message });
+        }
       })();
       return true;
     }
@@ -1843,9 +1879,14 @@ const isExtensionContextValid = () => {
     if (msg.action !== 'toggle_floating_panel_from_action') return undefined;
 
     (async () => {
-      const ui = await ensureUI();
-      const response = await ui.handleActionToggle();
-      sendResponse(response);
+      try {
+        const ui = await ensureUI();
+        const response = await ui.handleActionToggle();
+        sendResponse(response);
+      } catch (err) {
+        console.error('Erro ao alternar painel flutuante:', err);
+        sendResponse({ success: false, error: err.message });
+      }
     })();
 
     return true;
