@@ -695,12 +695,16 @@ const isExtensionContextValid = () => {
         await baixarAnexos(titulos, modelo);
 
         enviarLog("fim", "---------- PROCESSO FINALIZADO ----------");
+        sendResponse({ success: true });
       })();
       return true;
     }
 
     if (msg.action === 'baixar_siloms') {
-      baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
+      (async () => {
+        await baixarSiloms(msg.incluirSequencial, msg.tipoSequencial);
+        sendResponse({ success: true });
+      })();
       return true;
     }
   });
