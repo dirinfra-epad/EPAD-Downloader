@@ -1,99 +1,56 @@
-const DOMINIOS_SUPORTADOS = ['sigadaer.intraer', 'siloms.intraer'];
-
-const ehUrlSuportada = (url = '') => {
-  return DOMINIOS_SUPORTADOS.some(dominio => url.includes(dominio));
-};
-
-const obterIconePorUrl = (url = '') => {
-  return ehUrlSuportada(url) ? 'icon.png' : 'icon_inactive.png';
-};
-
-const atualizarIconeDaAba = async (tabId, url = '') => {
-  if (tabId === undefined) return;
-
-  const iconPath = obterIconePorUrl(url);
-
-  try {
-    await chrome.action.setIcon({
-      path: {
-        "16": iconPath,
-        "32": iconPath,
-        "48": iconPath,
-        "128": iconPath
-      },
-      tabId
-    });
-  } catch (err) {
-    console.warn(`Nao foi possivel atualizar icone da aba ${tabId}:`, err);
-  }
-};
-
+// Listener para enviar mensagem para o content script
 const enviarMensagemParaAba = async (tabId, mensagem) => {
   if (tabId === undefined) return null;
 
   try {
     return await chrome.tabs.sendMessage(tabId, mensagem);
   } catch (err) {
-    console.warn(`Nao foi possivel enviar mensagem para a aba ${tabId}:`, err);
+    console.error(`Não foi possivel enviar mensagem para a aba ${tabId}:`, err);
     return null;
   }
 };
 
-const sincronizarAbasAbertas = async () => {
-  try {
-    const abas = await chrome.tabs.query({});
-    await Promise.all(
-      abas
-        .filter(tab => tab?.id !== undefined)
-        .map(tab => atualizarIconeDaAba(tab.id, tab.url || ''))
-    );
-  } catch (err) {
-    console.warn('Nao foi possivel sincronizar abas abertas:', err);
-  }
-};
+// Listener para atualizar ícone quando solicitado pelo content script
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (['verificar_site', 'first_load'].includes(msg.action)) {
+    const tab = sender.tab;
+    const url = tab?.url || '';
 
-chrome.runtime.onInstalled.addListener(() => {
-  sincronizarAbasAbertas();
-});
+    console.log(`Evento recebido: '${msg.action}' da aba ${tab?.id}.`);
 
-chrome.runtime.onStartup.addListener(() => {
-  sincronizarAbasAbertas();
-});
+    let iconPath = 'icon_inactive.png';
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  try {
-    const tab = await chrome.tabs.get(tabId);
-    await atualizarIconeDaAba(tabId, tab?.url || '');
-  } catch (err) {
-    console.warn(`Nao foi possivel processar ativacao da aba ${tabId}:`, err);
-  }
-});
+    if (url.includes('sigadaer.intraer') || url.includes('siloms.intraer')) {
+      iconPath = 'icon.png';
+    } else {
+      console.error(`URL da aba ${tab?.id} não é suportada: ${url}`);
+    }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  const novaUrl = changeInfo.url || tab?.url || '';
-
-  if (changeInfo.url || changeInfo.status === 'complete') {
-    atualizarIconeDaAba(tabId, novaUrl);
+    if (tab?.id !== undefined) {
+      console.log(`Definindo ícone: ${iconPath} para a aba ${tab.id}`);
+      chrome.action.setIcon({
+        path: {
+          "16": iconPath,
+          "32": iconPath,
+          "48": iconPath,
+          "128": iconPath
+        },
+        tabId: tab.id
+      });
+    }
   }
 });
 
+// Listener para clique no ícone da extensão
 chrome.action.onClicked.addListener(async tab => {
   const tabId = tab?.id;
   const url = tab?.url || '';
 
-  if (tabId === undefined || !ehUrlSuportada(url)) return;
+  if (tabId === undefined) return;
+
+  const ehSuportada = url.includes('sigadaer.intraer') || url.includes('siloms.intraer');
+
+  if (!ehSuportada) return;
 
   await enviarMensagemParaAba(tabId, { action: 'toggle_floating_panel_from_action' });
-});
-
-// Listener para mensagens (alteracao de icone)
-chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (msg.action !== 'verificar_site') return;
-
-  const tab = sender.tab;
-  const url = tab?.url || '';
-
-  if (tab?.id !== undefined) {
-    atualizarIconeDaAba(tab.id, url);
-  }
 });

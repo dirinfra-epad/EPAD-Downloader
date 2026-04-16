@@ -16,6 +16,7 @@ const versaoAtual = safeManifestVersion();
 const parametrosUrl = new URLSearchParams(window.location.search);
 const modoEmbed = parametrosUrl.get('embedded') === '1';
 const DARK_THEME_STORAGE_KEY = 'epad-dark-mode-enabled';
+console.log(`Embeded: ${modoEmbed}`);
 
 const versionEl = document.getElementById('version');
 if (versionEl) versionEl.innerText = ` v${versaoAtual}`;

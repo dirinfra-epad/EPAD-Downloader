@@ -1,7 +1,11 @@
 const isExtensionContextValid = () => {
+  console.log('Verificando contexto de extensão...');
   try {
     return !!chrome?.runtime?.id;
-  } catch {
+  } catch (err) {
+    let msgErro = 'Contexto de extensão inválido: ' + (err.message || err);
+    console.error(msgErro);
+    enviarMensagemParaAba(sender.tab.id, { from: 'content_script', tipo: 'erro', log: msgErro });
     return false;
   }
 };
@@ -10,7 +14,15 @@ const isExtensionContextValid = () => {
   if (window !== window.top) return;
 
   if (!isExtensionContextValid()) return;
-  chrome.runtime.sendMessage({ action: 'verificar_site' });
+  chrome.runtime.sendMessage({ action: 'first_load' });
+
+  // Enviar mensagem quando a página fica visível novamente (desacordador do background)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isExtensionContextValid()) {
+      console.log('Aba visível, tentando "acordar" background.js...');
+      chrome.runtime.sendMessage({ action: 'verificar_site' }).catch((e) => {console.error('Erro ao tentar "acordar" background.js ao  voltar para a aba: ', e)});
+    }
+  });
 
   ///// INÍCIO DO SCRIPT SILOMS ---------------------------------------------------------------
   const baixarSiloms = async (incluirSequencial, tipoSequencial) => {
@@ -282,7 +294,7 @@ const isExtensionContextValid = () => {
     }
 
     if (!abaAnexos) {
-      enviarLog('erro', `Aba ${idAbaAnexos} não encontrada! (Verifique se o modelo selecionado está correto)`);
+      enviarLog('erro', `Aba '${idAbaAnexos}' não encontrada! (Verifique se o modelo selecionado está correto)`);
       return;
     }
 
@@ -456,7 +468,7 @@ const isExtensionContextValid = () => {
     }
 
     if (!abaAnexos) {
-      enviarLog('erro', `Aba ${idAbaAnexos} não encontrada! (Verifique se o modelo selecionado está correto)`);
+      enviarLog('erro', `Aba '${idAbaAnexos}' não encontrada! (Verifique se o modelo selecionado está correto)`);
       return;
     }
 
