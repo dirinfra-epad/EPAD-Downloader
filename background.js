@@ -16,6 +16,9 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     const tab = sender.tab;
     const url = tab?.url || '';
 
+    // Ignora URLs internas do Chrome
+    if (!url || url.startsWith('chrome://')) return;
+
     console.log(`Evento recebido: '${msg.action}' da aba ${tab?.id}.`);
 
     let iconPath = 'icon_inactive.png';
